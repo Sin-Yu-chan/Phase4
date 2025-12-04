@@ -229,6 +229,23 @@ public class EquipmentDAO {
             return false;
         }
     }
+    
+    // [추가] 존재하는 모든 건물 ID 목록 가져오기 (중복 제거)
+    public java.util.List<String> getAllBuildingIds(Connection conn) {
+        java.util.List<String> list = new java.util.ArrayList<>();
+        String sql = "SELECT DISTINCT BUILDING_ID FROM CLASSROOM_EQUIPMENT ORDER BY BUILDING_ID";
+        
+        try (java.sql.PreparedStatement pstmt = conn.prepareStatement(sql);
+             java.sql.ResultSet rs = pstmt.executeQuery()) {
+            
+            while (rs.next()) {
+                list.add(rs.getString("BUILDING_ID"));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
 
     // Helper: ResultSet -> DTO 매핑
     private List<EquipmentDTO> executeQuery(PreparedStatement pstmt) throws SQLException {
