@@ -36,7 +36,7 @@
                     <ul>
                         <li><a href="inventory_search.jsp">1. 재고 통합 검색</a></li>
                         <li><a href="manage_reports.jsp">2. 신고 내역 관리</a></li>
-                        <li><a href="#">3. 시스템 사용 로그 검색</a></li>
+                        <li><a href="search_logs.jsp">3. 대여비품 사용 로그 검색</a></li>
                         <li><a href="#">4. 통계 데이터 확인</a></li>
                         <li><a href="#">5. 학과별 학생 조회</a></li>
                         <li><a href="#">6. 나의 알림 확인</a></li>

@@ -20,17 +20,16 @@ public class UsageLogDAO {
         return searchLogs(conn, "", null); 
     }
 
-    // 2. 사용자 ID로 검색
+    // 2. 사용자 ID로 검색 (부분 검색)
     public List<UsageLogDTO> getLogsByUser(Connection conn, String userId) {
         return searchLogs(conn, "AND L.User_ID LIKE ?", "%" + userId + "%");
     }
 
     // 3. 비품 ID로 검색
     public List<UsageLogDTO> getLogsByEquipment(Connection conn, String equipId) {
-        return searchLogs(conn, "AND L.Equipment_ID = ?", equipId);
+        return searchLogs(conn, "AND L.Equipment_ID LIKE ?", "%" + equipId + "%");
     }
 
-    // Helper: 검색 조건에 따라 쿼리 실행
     private List<UsageLogDTO> searchLogs(Connection conn, String whereClause, String param) {
         List<UsageLogDTO> list = new ArrayList<>();
         String sql = BASE_SQL + "WHERE 1=1 " + whereClause + " ORDER BY L.Usage_Start_Time DESC";
@@ -54,6 +53,7 @@ public class UsageLogDAO {
             }
         } catch (SQLException e) {
             System.out.println("❌ 로그 조회 실패: " + e.getMessage());
+            e.printStackTrace();
         }
         return list;
     }

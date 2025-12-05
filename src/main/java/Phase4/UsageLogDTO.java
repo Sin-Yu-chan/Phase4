@@ -32,12 +32,16 @@ public class UsageLogDTO {
     public String getEquipmentId() { return equipmentId; }
     public String getModelName() { return modelName; }
 
-    // 날짜 포맷팅 헬퍼
-    public String getFormattedTime() {
-        SimpleDateFormat sdf = new SimpleDateFormat("MM-dd HH:mm");
-        String start = (startTime != null) ? sdf.format(startTime) : "-";
-        String end = (endTime != null) ? sdf.format(endTime) : "사용중";
-        return start + " ~ " + end;
+    // 시작 시간만 출력
+    public String getFormattedStartTime() {
+        if (startTime == null) return "-";
+        return new SimpleDateFormat("yyyy-MM-dd HH:mm").format(startTime);
+    }
+    
+    // 종료 시간만 출력
+    public String getFormattedEndTime() {
+        if (endTime == null) return "<span style='color:green;'>사용중</span>";
+        return new SimpleDateFormat("yyyy-MM-dd HH:mm").format(endTime);
     }
 
     @Override
