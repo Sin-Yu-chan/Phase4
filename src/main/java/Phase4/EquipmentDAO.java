@@ -9,7 +9,7 @@ import java.util.List;
 
 public class EquipmentDAO {
 
-    // 공통 SQL (슈퍼타입/서브타입/참조테이블 JOIN)
+    // 공통 SQL (JOIN 포함)
     private final String BASE_SQL = 
           "SELECT CE.Equipment_ID, CE.Management_Style, CE.Building_ID, CE.Classroom_Num, CE.Model_Name, "
         + "       AI.Serial_Number, AI.Status, "
@@ -34,7 +34,7 @@ public class EquipmentDAO {
             pstmt.setString(1, buildingId);
             list = executeQuery(pstmt);
         } catch (SQLException e) {
-            System.out.println("❌ 건물별 조회 실패: " + e.getMessage());
+            e.printStackTrace();
         }
         return list;
     }
@@ -42,14 +42,21 @@ public class EquipmentDAO {
     // 2. 특정 강의실 비품 검색
     public List<EquipmentDTO> searchByClassroom(Connection conn, String buildingId, String roomNum) {
         List<EquipmentDTO> list = new ArrayList<>();
-        String sql = BASE_SQL + "WHERE CE.Building_ID = ? AND CE.Classroom_Num = ? " + SORT_ORDER;
+        String sql = "";
+        
+        // 검색어(roomNum)가 있으면 조건 추가, 없으면 건물 전체
+        if(roomNum != null && !roomNum.trim().isEmpty()) {
+            sql = BASE_SQL + "WHERE CE.Building_ID = ? AND CE.Classroom_Num LIKE ? " + SORT_ORDER;
+        } else {
+            return searchByBuilding(conn, buildingId);
+        }
 
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, buildingId);
-            pstmt.setString(2, roomNum);
+            pstmt.setString(2, "%" + roomNum + "%"); // 부분 검색 지원
             list = executeQuery(pstmt);
         } catch (SQLException e) {
-            System.out.println("❌ 강의실별 조회 실패: " + e.getMessage());
+            e.printStackTrace();
         }
         return list;
     }
@@ -64,12 +71,12 @@ public class EquipmentDAO {
             pstmt.setString(2, status);
             list = executeQuery(pstmt);
         } catch (SQLException e) {
-            System.out.println("❌ 상태별 조회 실패: " + e.getMessage());
+            e.printStackTrace();
         }
         return list;
     }
 
-    // 4. 비품 상태 변경 (수리 등)
+    // 4. 비품 상태 변경
     public boolean updateEquipmentStatus(Connection conn, String equipId, String newStatus) {
         String sql = "UPDATE Asset_Item SET Status = ? WHERE Equipment_ID = ?";
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -77,7 +84,6 @@ public class EquipmentDAO {
             pstmt.setString(2, equipId);
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
-            System.out.println("❌ 상태 변경 실패: " + e.getMessage());
             return false;
         }
     }
@@ -110,13 +116,13 @@ public class EquipmentDAO {
     // 7. 모든 모델명 조회
     public List<String> getAllModelNames(Connection conn) {
         List<String> models = new ArrayList<>();
-        String sql = "SELECT Model_Name, Equipment_Name FROM Equipment_Type ORDER BY Model_Name";
+        String sql = "SELECT Model_Name FROM Equipment_Type ORDER BY Model_Name";
         try (PreparedStatement pstmt = conn.prepareStatement(sql);
              ResultSet rs = pstmt.executeQuery()) {
             while (rs.next()) {
-                models.add(rs.getString("Model_Name") + " (" + rs.getString("Equipment_Name") + ")");
+                models.add(rs.getString("Model_Name"));
             }
-        } catch (SQLException e) {}
+        } catch (SQLException e) { e.printStackTrace(); }
         return models;
     }
 
@@ -132,11 +138,11 @@ public class EquipmentDAO {
             try (ResultSet rs = pstmt.executeQuery()) {
                 if (rs.next()) return rs.getString(1);
             }
-        } catch (SQLException e) {}
+        } catch (SQLException e) { e.printStackTrace(); }
         return null;
     }
 
-    // 9. 자산 추가 (INSERT - Transaction)
+    // 9. 자산 추가 (트랜잭션)
     public boolean addAsset(Connection conn, String newId, String bId, String room, String model) {
         String sql1 = "INSERT INTO Classroom_Equipment (Equipment_ID, Management_Style, Building_ID, Classroom_Num, Model_Name) VALUES (?, 'Asset', ?, ?, ?)";
         String sql2 = "INSERT INTO Asset_Item (Equipment_ID, Serial_Number, Status) VALUES (?, ?, 'Normal')";
@@ -159,14 +165,13 @@ public class EquipmentDAO {
             return true;
         } catch (SQLException e) {
             try { conn.rollback(); } catch (SQLException ex) {}
-            System.out.println("❌ 자산 추가 실패: " + e.getMessage());
             return false;
         } finally {
             try { conn.setAutoCommit(true); } catch (SQLException e) {}
         }
     }
 
-    // 10. 소모품 추가 (INSERT - Transaction)
+    // 10. 소모품 추가 (트랜잭션)
     public boolean addNewConsumable(Connection conn, String newId, String bId, String room, String model, int qty) {
         String sql1 = "INSERT INTO Classroom_Equipment (Equipment_ID, Management_Style, Building_ID, Classroom_Num, Model_Name) VALUES (?, 'Consumable', ?, ?, ?)";
         String sql2 = "INSERT INTO Consumable_Stock (Equipment_ID, Quantity) VALUES (?, ?)";
@@ -195,7 +200,7 @@ public class EquipmentDAO {
         }
     }
 
-    // 11. 소모품 수량 덮어쓰기 (UPDATE)
+    // 11. 소모품 수량 덮어쓰기
     public boolean updateConsumableQty(Connection conn, String equipId, int newQty) {
         String sql = "UPDATE Consumable_Stock SET Quantity = ? WHERE Equipment_ID = ?";
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -205,49 +210,40 @@ public class EquipmentDAO {
         } catch (SQLException e) { return false; }
     }
 
-    // 12. 소모품 수량 보충 (UPDATE - Increase)
+    // 12. 소모품 수량 보충 (증가)
     public boolean increaseConsumableQty(Connection conn, String equipId, int amountToAdd) {
         String sql = "UPDATE Consumable_Stock SET Quantity = Quantity + ? WHERE Equipment_ID = ?";
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, amountToAdd);
             pstmt.setString(2, equipId);
             return pstmt.executeUpdate() > 0;
-        } catch (SQLException e) {
-            System.out.println("❌ 수량 보충 실패: " + e.getMessage());
-            return false;
-        }
+        } catch (SQLException e) { return false; }
     }
 
-    // 13. 비품 삭제 (DELETE)
+    // 13. 비품 삭제
     public boolean deleteEquipment(Connection conn, String equipId) {
         String sql = "DELETE FROM Classroom_Equipment WHERE Equipment_ID = ?";
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, equipId);
             return pstmt.executeUpdate() > 0;
-        } catch (SQLException e) {
-            System.out.println("❌ 삭제 실패: " + e.getMessage());
-            return false;
-        }
+        } catch (SQLException e) { return false; }
     }
     
-    // [추가] 존재하는 모든 건물 ID 목록 가져오기 (중복 제거)
-    public java.util.List<String> getAllBuildingIds(Connection conn) {
-        java.util.List<String> list = new java.util.ArrayList<>();
+    // 14. 모든 건물 ID 목록 조회
+    public List<String> getAllBuildingIds(Connection conn) {
+        List<String> list = new ArrayList<>();
         String sql = "SELECT DISTINCT BUILDING_ID FROM CLASSROOM_EQUIPMENT ORDER BY BUILDING_ID";
         
-        try (java.sql.PreparedStatement pstmt = conn.prepareStatement(sql);
-             java.sql.ResultSet rs = pstmt.executeQuery()) {
-            
+        try (PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
             while (rs.next()) {
                 list.add(rs.getString("BUILDING_ID"));
             }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        } catch (Exception e) { e.printStackTrace(); }
         return list;
     }
 
-    // Helper: ResultSet -> DTO 매핑
+    //ResultSet 매핑
     private List<EquipmentDTO> executeQuery(PreparedStatement pstmt) throws SQLException {
         List<EquipmentDTO> list = new ArrayList<>();
         try (ResultSet rs = pstmt.executeQuery()) {
