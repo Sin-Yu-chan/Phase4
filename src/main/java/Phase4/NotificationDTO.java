@@ -9,13 +9,16 @@ public class NotificationDTO {
     private Timestamp time;
     private String content;
     private String reportId;
+    private String isChecked; // [★추가] 읽음 여부 ('Y' or 'N')
 
-    public NotificationDTO(String notifId, String type, Timestamp time, String content, String reportId) {
+    // 생성자 수정
+    public NotificationDTO(String notifId, String type, Timestamp time, String content, String reportId, String isChecked) {
         this.notifId = notifId;
         this.type = type;
         this.time = time;
         this.content = content;
         this.reportId = reportId;
+        this.isChecked = isChecked;
     }
     
     // Getters
@@ -24,14 +27,14 @@ public class NotificationDTO {
     public Timestamp getTime() { return time; }
     public String getContent() { return content; }
     public String getReportId() { return reportId; }
+    public String getIsChecked() { return isChecked; } // Getter 추가
 
-    // 날짜 포맷팅 헬퍼
     public String getFormattedTime() {
         return new SimpleDateFormat("MM-dd HH:mm").format(time);
     }
 
     @Override
     public String toString() {
-        return String.format("[%s] %s : %s (Report: %s)", getFormattedTime(), type, content, reportId);
+        return String.format("[%s] %s : %s (Read: %s)", getFormattedTime(), type, content, isChecked);
     }
 }
