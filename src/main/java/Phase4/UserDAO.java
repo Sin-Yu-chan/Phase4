@@ -129,7 +129,6 @@ public class UserDAO {
         return 0;
     }
     
-    // 9. 최신 정보 조회 (세션 갱신용)
     public UserDTO getUserById(Connection conn, String id) {
         String sql = "SELECT * FROM P_User WHERE User_ID = ?";
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -150,8 +149,6 @@ public class UserDAO {
     // [수정됨] 10. [Query 1] 학과별 학생 조회 (웹 전용 - List 반환)
     public List<UserDTO> getStudentsByDept(Connection conn, String deptName) {
         List<UserDTO> list = new ArrayList<>();
-        // Query 1: 'Computer Science' 학과 소속 학생 조회
-        // 웹 화면에 ID도 보여주기 위해 SELECT * 로 변경했습니다.
         String sql = "SELECT * FROM P_User WHERE Department = ? AND Role = 'Student' ORDER BY Name";
         
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
