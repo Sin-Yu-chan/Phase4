@@ -49,10 +49,10 @@
                     <h3>[사용자 기능]</h3>
                     <ul>
                         <li><a href="reservation.jsp">1. 비품 예약 (대여 센터)</a></li>
-                        <li><a href="#">2. 나의 예약 확인/취소</a></li>
-                        <li><a href="#">3. 고장/부족 신고 하기</a></li>
-                        <li><a href="#">4. 나의 신고 내역 확인</a></li>
-                        <li><a href="#">5. 나의 정보 관리</a></li>
+                        <li><a href="my_reservations.jsp">2. 나의 예약 확인/취소</a></li>
+                        <li><a href="report.jsp">3. 고장/부족 신고 하기</a></li>
+                        <li><a href="my_reports.jsp">4. 나의 신고 내역 확인</a></li>
+                        <li><a href="my_info.jsp">5. 나의 정보 관리</a></li>
                     </ul>
                 <%
                     }
