@@ -34,7 +34,6 @@
     
     h2 { color: #333; margin-bottom: 20px; }
     
-    /* 검색창 스타일 */
     .search-box { background: #e9ecef; padding: 20px; border-radius: 8px; margin-bottom: 30px; display: inline-block; }
     select { padding: 8px 15px; border-radius: 4px; border: 1px solid #ccc; font-size: 14px; }
     button { padding: 8px 20px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
@@ -42,7 +41,6 @@
     
     .home-btn { float: right; background-color: #6c757d; padding: 5px 10px; font-size: 12px; }
 
-    /* 테이블 스타일 */
     table { width: 100%; border-collapse: collapse; margin-top: 10px; }
     th { background-color: #343a40; color: white; padding: 12px; }
     td { border-bottom: 1px solid #ddd; padding: 10px; color: #333; }
