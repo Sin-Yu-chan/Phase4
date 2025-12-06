@@ -9,11 +9,10 @@ import java.util.List;
 
 public class EquipmentDAO {
 
-    // [수정] CS.Max_Quantity 조회 추가
     private final String BASE_SQL = 
           "SELECT CE.Equipment_ID, CE.Management_Style, CE.Building_ID, CE.Classroom_Num, CE.Model_Name, "
         + "       AI.Serial_Number, AI.Status, "
-        + "       CS.Quantity, CS.Max_Quantity, " // ★ 추가됨
+        + "       CS.Quantity, CS.Max_Quantity, "
         + "       ET.Equipment_Name, "
         + "       C.Capacity "
         + "FROM Classroom_Equipment CE "
@@ -25,7 +24,6 @@ public class EquipmentDAO {
     private final String SORT_ORDER = 
           "ORDER BY CE.Management_Style ASC, AI.Status ASC, CS.Quantity ASC, ET.Equipment_Name ASC, CE.Classroom_Num ASC";
 
-    // 1. 건물별 검색
     public List<EquipmentDTO> searchByBuilding(Connection conn, String buildingId) {
         List<EquipmentDTO> list = new ArrayList<>();
         String sql = BASE_SQL + "WHERE CE.Building_ID = ? " + SORT_ORDER;
@@ -36,7 +34,6 @@ public class EquipmentDAO {
         return list;
     }
 
-    // 2. 강의실별 검색
     public List<EquipmentDTO> searchByClassroom(Connection conn, String buildingId, String roomNum) {
         List<EquipmentDTO> list = new ArrayList<>();
         if(roomNum != null && !roomNum.trim().isEmpty()) {
@@ -51,8 +48,7 @@ public class EquipmentDAO {
         }
         return list;
     }
-    
-    // [참조 데이터 자동 생성]
+
     private void ensureReferenceData(Connection conn, String bId, String room, String model) throws SQLException {
         String sqlModel = "INSERT INTO Equipment_Type (Model_Name, Equipment_Name) SELECT ?, ? FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM Equipment_Type WHERE Model_Name = ?)";
         try (PreparedStatement pstmt = conn.prepareStatement(sqlModel)) {
@@ -64,7 +60,6 @@ public class EquipmentDAO {
         }
     }
 
-    // 9. 자산 추가
     public boolean addAsset(Connection conn, String newId, String bId, String room, String model) {
         String sql1 = "INSERT INTO Classroom_Equipment (Equipment_ID, Management_Style, Building_ID, Classroom_Num, Model_Name) VALUES (?, 'Asset', ?, ?, ?)";
         String sql2 = "INSERT INTO Asset_Item (Equipment_ID, Serial_Number, Status) VALUES (?, ?, 'Normal')";
@@ -81,10 +76,8 @@ public class EquipmentDAO {
         } catch (SQLException e) { try { conn.rollback(); } catch (SQLException ex) {} return false; } finally { try { conn.setAutoCommit(true); } catch (SQLException e) {} }
     }
 
-    // 10. 소모품 추가 [수정됨: maxQty 인자 추가 및 저장]
     public boolean addNewConsumable(Connection conn, String newId, String bId, String room, String model, int qty, int maxQty) {
         String sql1 = "INSERT INTO Classroom_Equipment (Equipment_ID, Management_Style, Building_ID, Classroom_Num, Model_Name) VALUES (?, 'Consumable', ?, ?, ?)";
-        // [수정] Max_Quantity 저장
         String sql2 = "INSERT INTO Consumable_Stock (Equipment_ID, Quantity, Max_Quantity) VALUES (?, ?, ?)";
         try {
             conn.setAutoCommit(false);
@@ -95,14 +88,13 @@ public class EquipmentDAO {
             try (PreparedStatement pstmt = conn.prepareStatement(sql2)) {
                 pstmt.setString(1, newId); 
                 pstmt.setInt(2, qty); 
-                pstmt.setInt(3, maxQty); // ★ 저장
+                pstmt.setInt(3, maxQty);
                 pstmt.executeUpdate();
             }
             conn.commit(); return true;
         } catch (SQLException e) { try { conn.rollback(); } catch (SQLException ex) {} return false; } finally { try { conn.setAutoCommit(true); } catch (SQLException e) {} }
     }
 
-    // (기타 메서드들 유지)
     public boolean isBuildingExist(Connection conn, String bId) { return false; }
     public boolean isClassroomExist(Connection conn, String bId, String room) { return false; }
     
@@ -156,9 +148,45 @@ public class EquipmentDAO {
         String sql = "UPDATE Asset_Item SET Status = ? WHERE Equipment_ID = ?";
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) { pstmt.setString(1, newStatus); pstmt.setString(2, equipId); return pstmt.executeUpdate() > 0; } catch (SQLException e) { return false; }
     }
-    public List<EquipmentDTO> searchByStatus(Connection conn, String buildingId, String status) { return null; }
+    
+    public List<EquipmentDTO> searchByStatus(Connection conn, String buildingId, String status) {
+        List<EquipmentDTO> list = new ArrayList<>();
+        String sql = "";
 
-    // Helper: ResultSet 매핑 (수정됨)
+        if ("Low_Stock".equals(status)) {
+            sql = BASE_SQL + "WHERE CE.Building_ID = ? AND CE.Management_Style = 'Consumable' "
+                           + "AND CS.Quantity < COALESCE(CS.Max_Quantity, 10) " + SORT_ORDER;
+            
+            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                pstmt.setString(1, buildingId);
+                list = executeQuery(pstmt);
+            } catch (SQLException e) { e.printStackTrace(); }
+            
+        } 
+        else if ("Empty".equals(status)) {
+            sql = BASE_SQL + "WHERE CE.Building_ID = ? AND CE.Management_Style = 'Consumable' "
+                           + "AND CS.Quantity = 0 " + SORT_ORDER;
+            
+            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                pstmt.setString(1, buildingId);
+                list = executeQuery(pstmt);
+            } catch (SQLException e) { e.printStackTrace(); }
+            
+        } 
+        // Case 3: 자산 상태 (Normal, Broken, Repair) 검색
+        else {
+            sql = BASE_SQL + "WHERE CE.Building_ID = ? AND AI.Status = ? " + SORT_ORDER;
+            
+            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                pstmt.setString(1, buildingId);
+                pstmt.setString(2, status); // 예: "Broken"
+                list = executeQuery(pstmt);
+            } catch (SQLException e) { e.printStackTrace(); }
+        }
+        
+        return list;
+    }
+
     private List<EquipmentDTO> executeQuery(PreparedStatement pstmt) throws SQLException {
         List<EquipmentDTO> list = new ArrayList<>();
         try (ResultSet rs = pstmt.executeQuery()) {
@@ -166,7 +194,6 @@ public class EquipmentDAO {
                 String eName = rs.getString("Equipment_Name");
                 if (eName == null) eName = rs.getString("Model_Name");
                 
-                // [수정] DB의 Max_Quantity 값 가져오기 (없으면 0 -> 10으로 처리)
                 int maxQ = rs.getInt("Max_Quantity");
                 if(rs.wasNull()) maxQ = 10; 
 
@@ -175,7 +202,7 @@ public class EquipmentDAO {
                     rs.getString("Building_ID"), rs.getString("Classroom_Num"),
                     rs.getString("Model_Name"), rs.getString("Serial_Number"),
                     rs.getString("Status"), rs.getInt("Quantity"), eName, rs.getInt("Capacity"),
-                    maxQ // ★ DTO에 전달
+                    maxQ
                 ));
             }
         }
