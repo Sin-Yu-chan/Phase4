@@ -115,10 +115,6 @@
                     <a href="my_reports.jsp" class="card">
                         <div class="card-icon">📋</div><div class="card-title">나의 신고 내역</div>
                     </a>
-                    <a href="notification_list.jsp" class="card" style="border-color:#ffc107;">
-                        <div class="card-icon">🔔</div><div class="card-title">나의 알림</div>
-                        <% if(unreadCount > 0) { %><span class="badge-count"><%= unreadCount %>건</span><% } %>
-                    </a>
                     <a href="my_info.jsp" class="card">
                         <div class="card-icon">👤</div><div class="card-title">나의 정보</div>
                     </a>
