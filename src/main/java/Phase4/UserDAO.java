@@ -4,6 +4,8 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class UserDAO {
 
@@ -145,29 +147,31 @@ public class UserDAO {
         return null;
     }
     
-    // 10. [Query 1] 학과별 학생 조회 (관리자 기능)
-    public void showStudentsByDept(Connection conn, String deptName) {
-        String sql = "SELECT Name, Phone_Number FROM P_User WHERE Department = ? AND Role = 'Student'";
+    // [수정됨] 10. [Query 1] 학과별 학생 조회 (웹 전용 - List 반환)
+    public List<UserDTO> getStudentsByDept(Connection conn, String deptName) {
+        List<UserDTO> list = new ArrayList<>();
+        // Query 1: 'Computer Science' 학과 소속 학생 조회
+        // 웹 화면에 ID도 보여주기 위해 SELECT * 로 변경했습니다.
+        String sql = "SELECT * FROM P_User WHERE Department = ? AND Role = 'Student' ORDER BY Name";
         
-        System.out.println("\n>> [" + deptName + "] 소속 학생 목록");
-        System.out.println("-------------------------------------");
-        System.out.printf("%-15s | %s\n", "이름", "전화번호");
-        System.out.println("-------------------------------------");
-
-        boolean hasData = false;
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, deptName);
             try (ResultSet rs = pstmt.executeQuery()) {
                 while (rs.next()) {
-                    System.out.printf("%-15s | %s\n", rs.getString("Name"), rs.getString("Phone_Number"));
-                    hasData = true;
+                    list.add(new UserDTO(
+                        rs.getString("User_ID"),
+                        rs.getString("Name"),
+                        rs.getString("Role"),
+                        rs.getString("Department"),
+                        rs.getString("Phone_Number"),
+                        rs.getString("Password")
+                    ));
                 }
             }
         } catch (SQLException e) {
             System.out.println("❌ 조회 실패: " + e.getMessage());
+            e.printStackTrace();
         }
-        
-        if (!hasData) System.out.println("   (해당 학과의 학생 데이터가 없습니다)");
-        System.out.println("-------------------------------------");
+        return list;
     }
 }

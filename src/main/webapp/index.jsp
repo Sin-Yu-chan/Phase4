@@ -38,7 +38,7 @@
                         <li><a href="manage_reports.jsp">2. 신고 내역 관리</a></li>
                         <li><a href="search_logs.jsp">3. 대여비품 사용 로그 검색</a></li>
                         <li><a href="statistics.jsp">4. 통계 분석</a></li>
-                        <li><a href="#">5. 학과별 학생 조회</a></li>
+                        <li><a href="student_list.jsp">5. 학과별 학생 조회</a></li>
                         <li><a href="#">6. 나의 알림 확인</a></li>
                         <li><a href="#">7. 나의 정보 관리</a></li>
                         <li><a href="#">8. 비품 자재 관리</a></li>
