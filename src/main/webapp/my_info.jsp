@@ -5,19 +5,16 @@
 <%@ page import="java.sql.Connection" %>
 
 <%
-    // 1. 로그인 체크
     String userId = (String) session.getAttribute("userID");
     if (userId == null) {
         out.println("<script>alert('로그인이 필요합니다.'); location.href='login.jsp';</script>");
         return;
     }
 
-    // 2. 최신 정보 가져오기
     Connection conn = DBConnection.getConnection();
     UserDAO userDAO = new UserDAO();
     UserDTO user = userDAO.getUserById(conn, userId);
     
-    // 탈퇴 방지용 관리자 수 체크
     int adminCount = 0;
     if ("Admin".equals(user.getRole())) {
         adminCount = userDAO.getAdminCount(conn);
@@ -34,32 +31,60 @@
 <style>
     body { font-family: 'Segoe UI', sans-serif; background-color: #f8f9fa; text-align: center; }
     .container { width: 600px; margin: 30px auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); text-align: left; }
-    
     h2 { margin-top: 0; color: #333; border-bottom: 2px solid #007bff; padding-bottom: 10px; }
-    
     .section { margin-bottom: 30px; padding: 20px; border: 1px solid #eee; border-radius: 8px; background: #fff; }
     .section h3 { margin-top: 0; font-size: 18px; color: #555; }
-    
     label { display: block; font-weight: bold; margin-top: 10px; font-size: 14px; }
     input, select { width: 100%; padding: 8px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
     input[readonly] { background-color: #e9ecef; color: #666; cursor: not-allowed; }
-    
     button { width: 100%; padding: 10px; margin-top: 15px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; color: white; }
     .btn-update { background-color: #28a745; }
     .btn-pw { background-color: #ffc107; color: #333; }
     .btn-delete { background-color: #dc3545; }
-    .home-btn { background-color: #6c757d; margin-bottom: 20px; width: auto; padding: 5px 15px; float: right; font-size: 12px; }
+    .home-btn { background-color: #6c757d; float: right; padding: 5px 15px; font-size: 12px; margin-bottom: 10px; }
 </style>
+<script>
+    function autoHyphen(target) {
+        var number = target.value.replace(/[^0-9]/g, "");
+        var phone = "";
+
+        if(number.length < 4) {
+            phone = number;
+        } else if(number.length < 8) {
+            phone += number.substr(0, 3);
+            phone += "-";
+            phone += number.substr(3);
+        } else {
+            phone += number.substr(0, 3);
+            phone += "-";
+            phone += number.substr(3, 4);
+            phone += "-";
+            phone += number.substr(7);
+        }
+        target.value = phone;
+    }
+
+    // 유효성 검사
+    function validateInfoForm() {
+        var phone = document.forms["infoForm"]["phone"].value;
+        var phonePattern = /^010-\d{4}-\d{4}$/;
+        
+        if (!phonePattern.test(phone)) {
+            alert("전화번호는 '010-1234-5678' 형식으로 정확히 입력해주세요.");
+            return false;
+        }
+        return true;
+    }
+</script>
 </head>
 <body>
-
     <div class="container">
         <button class="home-btn" onclick="location.href='index.jsp'">🏠 메인으로</button>
         <h2>👤 나의 정보 관리 (My Info)</h2>
 
         <div class="section">
             <h3>📝 기본 정보 수정</h3>
-            <form action="my_info_action.jsp" method="post">
+            <form name="infoForm" action="my_info_action.jsp" method="post" onsubmit="return validateInfoForm()">
                 <input type="hidden" name="action" value="update_info">
                 
                 <label>아이디 (수정불가)</label>
@@ -72,7 +97,7 @@
                 <input type="text" name="name" value="<%= user.getName() %>" required>
 
                 <label>전화번호</label>
-                <input type="text" name="phone" value="<%= user.getPhoneNumber() %>" required>
+                <input type="text" name="phone" value="<%= user.getPhoneNumber() %>" required oninput="autoHyphen(this)" maxlength="13" placeholder="010-xxxx-xxxx">
 
                 <label>학과 (Department)</label>
                 <% if ("Admin".equals(user.getRole())) { %>
@@ -96,13 +121,10 @@
             <h3>🔒 비밀번호 변경</h3>
             <form action="my_info_action.jsp" method="post">
                 <input type="hidden" name="action" value="update_pw">
-                
                 <label>현재 비밀번호</label>
                 <input type="password" name="currentPw" required placeholder="현재 사용 중인 비밀번호">
-                
                 <label>새 비밀번호</label>
                 <input type="password" name="newPw" required placeholder="변경할 비밀번호 (4자 이상)">
-                
                 <button type="submit" class="btn-pw">비밀번호 변경</button>
             </form>
         </div>
@@ -115,7 +137,6 @@
                     <b style="color:red;">(주의: 현재 마지막 관리자이므로 탈퇴가 불가능합니다.)</b>
                 <% } %>
             </p>
-            
             <form action="my_info_action.jsp" method="post" onsubmit="return confirm('정말로 탈퇴하시겠습니까?');">
                 <input type="hidden" name="action" value="withdraw">
                 <% if ("Admin".equals(user.getRole()) && adminCount <= 1) { %>
@@ -125,8 +146,6 @@
                 <% } %>
             </form>
         </div>
-
     </div>
-
 </body>
 </html>
