@@ -11,10 +11,10 @@ public class EquipmentDTO {
     private int quantity;
     private String equipmentName;
     private int roomCapacity;
+    private int maxQuantity; // [추가] 기준 수량 저장용
 
-    public EquipmentDTO(String equipmentId, String managementStyle, String buildingId, 
-                        String classroomNum, String modelName, String serialNumber, 
-                        String status, int quantity, String equipmentName, int roomCapacity) {
+    public EquipmentDTO(String equipmentId, String managementStyle, String buildingId, String classroomNum,
+            String modelName, String serialNumber, String status, int quantity, String equipmentName, int roomCapacity, int maxQuantity) {
         this.equipmentId = equipmentId;
         this.managementStyle = managementStyle;
         this.buildingId = buildingId;
@@ -25,6 +25,7 @@ public class EquipmentDTO {
         this.quantity = quantity;
         this.equipmentName = equipmentName;
         this.roomCapacity = roomCapacity;
+        this.maxQuantity = maxQuantity;
     }
 
     public String getEquipmentId() { return equipmentId; }
@@ -37,9 +38,5 @@ public class EquipmentDTO {
     public int getQuantity() { return quantity; }
     public String getEquipmentName() { return equipmentName; }
     public int getRoomCapacity() { return roomCapacity; }
-
-    @Override
-    public String toString() {
-        return String.format("[%s] %s (%s)", equipmentId, equipmentName, modelName);
-    }
+    public int getMaxQuantity() { return maxQuantity; } // Getter
 }

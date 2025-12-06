@@ -41,7 +41,7 @@
                         <li><a href="student_list.jsp">5. 학과별 학생 조회</a></li>
                         <li><a href="#">6. 나의 알림 확인</a></li>
                         <li><a href="my_info.jsp">7. 나의 정보 관리</a></li>
-                        <li><a href="#">8. 비품 자재 관리</a></li>
+                        <li><a href="manage_stock.jsp">8. 비품 자재 관리</a></li>
                     </ul>
                 <%
                     } else {
