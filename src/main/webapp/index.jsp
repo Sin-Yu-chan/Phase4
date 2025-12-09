@@ -44,7 +44,27 @@
     .card:hover { transform: translateY(-5px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); border-color: #007bff; }
     .card-icon { font-size: 32px; margin-bottom: 10px; }
     .card-title { font-size: 16px; font-weight: bold; }
-    .badge-count { background-color: #dc3545; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px; position: absolute; top: 15px; right: 15px; }
+    
+    .badge-count { background-color: #dc3545; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px; position: absolute; top: 15px; right: 15px; display: inline-block; }
+    
+    #toastPopup {
+        visibility: hidden; 
+        min-width: 250px; 
+        background-color: #333; 
+        color: #fff; 
+        text-align: center; 
+        border-radius: 4px; 
+        padding: 16px; 
+        position: fixed; 
+        z-index: 1000; 
+        right: 30px; 
+        bottom: 30px; 
+        font-size: 15px; 
+        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        opacity: 0;
+        transition: opacity 0.5s, bottom 0.5s;
+    }
+    #toastPopup.show { visibility: visible; opacity: 1; bottom: 50px; }
 </style>
 </head>
 <body>
@@ -92,10 +112,14 @@
                     <a href="manage_stock.jsp" class="card">
                         <div class="card-icon">📦</div><div class="card-title">비품 자재 관리</div>
                     </a>
+                    
                     <a href="notification_list.jsp" class="card" style="border-color:#ffc107;">
                         <div class="card-icon">🔔</div><div class="card-title">알림 확인</div>
-                        <% if(unreadCount > 0) { %><span class="badge-count"><%= unreadCount %>건</span><% } %>
+                        <span id="badgeSpan" class="badge-count" style="display:<%= (unreadCount > 0) ? "inline-block" : "none" %>;">
+                            <%= unreadCount %>건
+                        </span>
                     </a>
+                    
                     <a href="my_info.jsp" class="card">
                         <div class="card-icon">👤</div><div class="card-title">나의 정보</div>
                     </a>
@@ -122,6 +146,62 @@
             <% } %>
         </div>
     <% } %>
+
+    <div id="toastPopup">📢 새로운 알림이 도착했습니다!</div>
+
+    <script>
+        // 초기값 설정 (JSP 변수 -> JS 변수)
+        let currentCount = <%= unreadCount %>;
+        let role = "<%= (userRole != null) ? userRole : "" %>";
+
+        // 관리자일 때만 3초마다 체크 실행
+        if (role === "Admin") {
+            setInterval(function() {
+                checkNotifications();
+            }, 3000);
+        }
+
+        function checkNotifications() {
+            fetch('api_get_unread_count.jsp')
+                .then(response => response.text())
+                .then(text => {
+                    let newCount = parseInt(text.trim());
+
+                    // 로그아웃 상태거나 에러면 중단
+                    if (isNaN(newCount) || newCount < 0) return;
+
+                    if (newCount > currentCount) {
+                        updateBadge(newCount);
+                        showToast("📢 새로운 신고가 접수되었습니다! (" + newCount + "건)");
+                        currentCount = newCount;
+                    } 
+                    else if (newCount < currentCount) {
+                        updateBadge(newCount);
+                        currentCount = newCount;
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        function updateBadge(count) {
+            let badge = document.getElementById("badgeSpan");
+            if (badge) {
+                if (count > 0) {
+                    badge.innerText = count + "건";
+                    badge.style.display = "inline-block";
+                } else {
+                    badge.style.display = "none";
+                }
+            }
+        }
+
+        function showToast(message) {
+            var x = document.getElementById("toastPopup");
+            x.innerText = message;
+            x.className = "show"; 
+            setTimeout(function(){ x.className = x.className.replace("show", ""); }, 3000);
+        }
+    </script>
 
 </body>
 </html>
