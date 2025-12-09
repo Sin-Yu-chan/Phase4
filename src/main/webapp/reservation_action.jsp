@@ -12,15 +12,14 @@
         return;
     }
     
-    //동작 구분 (null이면 예약 추가, cancel이면 취소)
     String action = request.getParameter("action");
-
     Connection conn = null;
+    
     try {
         conn = DBConnection.getConnection();
         ReservationDAO resDAO = new ReservationDAO();
 
-        // 1.예약 취소 로직
+        // 1. 예약 취소 로직
         if ("cancel".equals(action)) {
             String resId = request.getParameter("id");
             boolean success = resDAO.cancelReservation(conn, resId); 
@@ -48,33 +47,34 @@
         String startStr = request.getParameter("startTime");
         String endStr = request.getParameter("endTime");
         
-        // 날짜 처리 및 중복 확인 로직
+        // 날짜 처리 및 안전한 예약 로직
         if (equipId != null && startStr != null && endStr != null) {
             startStr = startStr.replace("T", " ") + ":00";
             endStr = endStr.replace("T", " ") + ":00";
             Timestamp startTs = Timestamp.valueOf(startStr);
             Timestamp endTs = Timestamp.valueOf(endStr);
-    
+
             if (!endTs.after(startTs)) {
 %>
-                <script>alert("종료 시간이 시작 시간보다 빨라야 합니다."); history.back();</script>
+                <script>alert("종료 시간이 시작 시간보다 빨라야 합니다.");
+                history.back();</script>
 <%
                 return;
             }
     
-            if (resDAO.isAvailable(conn, equipId, startTs, endTs)) {
-                if (resDAO.addReservation(conn, userId, equipId, startTs, endTs)) {
+            // 동시성 이슈 해결
+            String result = resDAO.makeSafeReservation(conn, userId, equipId, startTs, endTs);
+
+            if ("success".equals(result)) {
 %>
-                    <script>alert("✅ 예약 완료!"); location.href = 'index.jsp';</script>
+                <script>alert("✅ 예약 완료!");
+                location.href = 'index.jsp';</script>
 <%
-                } else {
-%>
-                    <script>alert("❌ DB 오류."); history.back();</script>
-<%
-                }
             } else {
+                // 실패 사유 출력 (예: 이미 예약된 시간입니다 등)
 %>
-                <script>alert("❌ 이미 예약된 시간입니다."); history.back();</script>
+                <script>alert("❌ 예약 실패: <%= result %>");
+                history.back();</script>
 <%
             }
         }
@@ -82,7 +82,8 @@
     } catch (Exception e) {
         e.printStackTrace();
 %>
-        <script>alert("오류 발생: <%= e.getMessage() %>"); history.back();</script>
+        <script>alert("오류 발생: <%= e.getMessage() %>");
+        history.back();</script>
 <%
     } finally {
         DBConnection.close(conn);

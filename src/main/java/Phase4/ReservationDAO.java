@@ -91,4 +91,85 @@ public class ReservationDAO {
             return false;
         }
     }
+    
+    //트랜잭션 예약 처리
+    public String makeSafeReservation(Connection conn, String userId, String equipId, Timestamp start, Timestamp end) {
+        String resultMsg = "fail";
+        PreparedStatement pstmtLock = null;
+        PreparedStatement pstmtCheck = null;
+        PreparedStatement pstmtInsert = null;
+        ResultSet rs = null;
+
+        try {
+            // 1. 트랜잭션 수동 관리 시작
+            conn.setAutoCommit(false);
+
+            // 2. [Locking] 부모 테이블(Classroom_Equipment)을 먼저 잠급니다.
+            // 이유: 빈 시간대(Reservation 데이터가 없는 구간)에 동시에 들어오는 것을 막기 위해
+            // 반드시 존재하는 장비 행(Row)을 잡아야 합니다.
+            String sqlLock = "SELECT Equipment_ID FROM Classroom_Equipment WHERE Equipment_ID = ? FOR UPDATE";
+            pstmtLock = conn.prepareStatement(sqlLock);
+            pstmtLock.setString(1, equipId);
+            
+            if (!pstmtLock.executeQuery().next()) {
+                conn.rollback();
+                return "존재하지 않는 비품입니다.";
+            }
+
+            // 3. 겹치는 일정이 있는지 검사 (Lock이 걸린 상태라 안전함)
+            String sqlCheck = "SELECT Reservation_ID FROM Reservation "
+                            + "WHERE Equipment_ID = ? "
+                            + "AND (Start_Time < ? AND End_Time > ?)";
+            
+            pstmtCheck = conn.prepareStatement(sqlCheck);
+            pstmtCheck.setString(1, equipId);
+            pstmtCheck.setTimestamp(2, end);
+            pstmtCheck.setTimestamp(3, start);
+
+            rs = pstmtCheck.executeQuery();
+
+            if (rs.next()) {
+                // 겹치는 예약 발견 -> 실패 처리
+                conn.rollback();
+                resultMsg = "이미 예약된 시간입니다. (중복 발생)";
+            } else {
+                // 4. 예약 진행 (Insert)
+                String newId = "RES" + (System.currentTimeMillis() % 1000000); // 기존 로직 유지
+                String sqlInsert = "INSERT INTO Reservation (Reservation_ID, Start_Time, End_Time, User_ID, Equipment_ID) "
+                                 + "VALUES (?, ?, ?, ?, ?)";
+
+                pstmtInsert = conn.prepareStatement(sqlInsert);
+                pstmtInsert.setString(1, newId);
+                pstmtInsert.setTimestamp(2, start);
+                pstmtInsert.setTimestamp(3, end);
+                pstmtInsert.setString(4, userId);
+                pstmtInsert.setString(5, equipId);
+                
+                int rows = pstmtInsert.executeUpdate();
+                
+                if (rows > 0) {
+                    conn.commit(); // 5. 성공 시 커밋 (이때 락 해제됨)
+                    resultMsg = "success";
+                } else {
+                    conn.rollback();
+                    resultMsg = "DB 오류로 예약에 실패했습니다.";
+                }
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            try { conn.rollback(); } catch (SQLException ex) {} // 에러 발생 시 롤백
+            resultMsg = "시스템 오류: " + e.getMessage();
+        } finally {
+            try { 
+                conn.setAutoCommit(true); // 오토커밋 원래대로 복구 (필수)
+                if(rs != null) rs.close();
+                if(pstmtLock != null) pstmtLock.close();
+                if(pstmtCheck != null) pstmtCheck.close();
+                if(pstmtInsert != null) pstmtInsert.close();
+            } catch (Exception e) {}
+        }
+        
+        return resultMsg;
+    }
 }
