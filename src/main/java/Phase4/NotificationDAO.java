@@ -6,7 +6,7 @@ import java.util.List;
 
 public class NotificationDAO {
 
-    // 1. 알림 전송 (기존 유지)
+    // 1. 알림 전송
     public void sendNotificationToAdmins(Connection conn, String reportId, String content) {
         String notifId = "N" + System.currentTimeMillis();
         String sqlNotif = "INSERT INTO Notification (Notification_ID, Notification_Type, Notification_Time, Content, Report_ID) VALUES (?, 'New Report', SYSTIMESTAMP, ?, ?)";
@@ -16,6 +16,9 @@ public class NotificationDAO {
         PreparedStatement pstmt = null;
         ResultSet rs = null;
         try {
+            // 트랜잭션 시작
+            conn.setAutoCommit(false);
+
             // (1) 알림 등록
             pstmt = conn.prepareStatement(sqlNotif);
             pstmt.setString(1, notifId);
@@ -38,16 +41,23 @@ public class NotificationDAO {
                 pstmt.setString(2, notifId);
                 pstmt.executeUpdate();
             }
+            
+            //성공 시 커밋
             conn.commit();
+            
         } catch (SQLException e) {
-            try { conn.rollback(); } catch (SQLException ex) {}
+            try { conn.rollback(); } catch (SQLException ex) {} // 실패 시 롤백
             e.printStackTrace();
         } finally {
-            try { if(pstmt!=null) pstmt.close(); if(rs!=null) rs.close(); } catch(Exception e) {}
+            try { 
+                conn.setAutoCommit(true); //오토커밋 복구
+                if(pstmt!=null) pstmt.close(); 
+                if(rs!=null) rs.close(); 
+            } catch(Exception e) {}
         }
     }
 
-    // [New] 2. 안 읽은 알림 개수 조회 (메인 배지용)
+    // 2. 안 읽은 알림 개수 조회
     public int getUnreadCount(Connection conn, String userId) {
         String sql = "SELECT COUNT(*) FROM Receives WHERE User_ID = ? AND Is_Checked = 'N'";
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -59,7 +69,7 @@ public class NotificationDAO {
         return 0;
     }
 
-    // [Modified] 3. 나의 알림 목록 조회 (DTO 수정 반영)
+    // 3. 나의 알림 목록 조회
     public List<NotificationDTO> getMyNotifications(Connection conn, String userId) {
         List<NotificationDTO> list = new ArrayList<>();
         String sql = "SELECT N.Notification_ID, N.Notification_Type, N.Notification_Time, N.Content, N.Report_ID, R.Is_Checked "
@@ -78,7 +88,7 @@ public class NotificationDAO {
                         rs.getTimestamp("Notification_Time"),
                         rs.getString("Content"),
                         rs.getString("Report_ID"),
-                        rs.getString("Is_Checked") // ★ 추가됨
+                        rs.getString("Is_Checked")
                     ));
                 }
             }
@@ -86,24 +96,36 @@ public class NotificationDAO {
         return list;
     }
 
-    // [New] 4. 개별 알림 읽음 처리
+    // 4. 개별 알림 읽음 처리
     public void markAsRead(Connection conn, String notifId, String userId) {
         String sql = "UPDATE Receives SET Is_Checked = 'Y' WHERE Notification_ID = ? AND User_ID = ?";
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            conn.setAutoCommit(false); // [★추가]
             pstmt.setString(1, notifId);
             pstmt.setString(2, userId);
             pstmt.executeUpdate();
             conn.commit();
-        } catch (SQLException e) { try{conn.rollback();}catch(Exception ex){} e.printStackTrace(); }
+        } catch (SQLException e) { 
+            try{conn.rollback();}catch(Exception ex){} 
+            e.printStackTrace(); 
+        } finally {
+            try { conn.setAutoCommit(true); } catch(Exception e) {}
+        }
     }
 
-    // 5. 전체 읽음 처리
+    // 5. 전체 읽음 처리 (트랜잭션 수정됨)
     public void markAllAsRead(Connection conn, String userId) {
         String sql = "UPDATE Receives SET Is_Checked = 'Y' WHERE User_ID = ? AND Is_Checked = 'N'";
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            conn.setAutoCommit(false);
             pstmt.setString(1, userId);
             pstmt.executeUpdate();
             conn.commit();
-        } catch (SQLException e) { try{conn.rollback();}catch(Exception ex){} e.printStackTrace(); }
+        } catch (SQLException e) { 
+            try{conn.rollback();}catch(Exception ex){} 
+            e.printStackTrace(); 
+        } finally {
+            try { conn.setAutoCommit(true); } catch(Exception e) {}
+        }
     }
 }
