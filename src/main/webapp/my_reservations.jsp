@@ -1,6 +1,7 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
 <%@ page import="java.util.List" %>
 <%@ page import="java.text.SimpleDateFormat" %>
+<%@ page import="java.sql.Timestamp" %>
 <%@ page import="java.sql.Connection" %>
 <%@ page import="Phase4.DBConnection" %>
 <%@ page import="Phase4.ReservationDAO" %>
@@ -16,6 +17,7 @@
     DBConnection.close(conn);
     
     SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+    long currentTime = System.currentTimeMillis(); // 현재 시간
 %>
 
 <!DOCTYPE html>
@@ -30,6 +32,7 @@
     th, td { padding: 10px; border-bottom: 1px solid #eee; font-size: 14px; }
     th { background-color: #007bff; color: white; }
     .btn-cancel { background-color: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
+    .btn-return { background-color: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
 </style>
 </head>
 <body>
@@ -40,18 +43,27 @@
         <table>
             <tr><th>예약ID</th><th>비품명</th><th>모델명</th><th>사용 시간</th><th>관리</th></tr>
             <% 
-                if(list.isEmpty()) { out.println("<tr><td colspan='5'>예약 내역이 없습니다.</td></tr>"); }
-                else {
+                if(list.isEmpty()) { 
+                    out.println("<tr><td colspan='5'>예약 내역이 없습니다.</td></tr>"); 
+                } else {
                     for(ReservationDTO r : list) {
                         String timeStr = sdf.format(r.getStartTime()) + " ~ " + sdf.format(r.getEndTime()).substring(11);
+                        
+                        // 시간 비교
+                        boolean isStarted = r.getStartTime().getTime() <= currentTime;
             %>
             <tr>
                 <td><%= r.getReservationId() %></td>
                 <td><%= r.getEquipmentName() %></td>
                 <td><%= r.getModelName() %></td>
                 <td><%= timeStr %></td>
+                
                 <td>
-                    <button class="btn-cancel" onclick="if(confirm('예약을 취소하시겠습니까?')) location.href='reservation_action.jsp?action=cancel&id=<%= r.getReservationId() %>'">취소</button>
+                    <% if (isStarted) { %>
+                        <button class="btn-return" onclick="if(confirm('사용을 마치고 반납하시겠습니까?\n(사용 기록이 저장됩니다.)')) location.href='reservation_action.jsp?action=return&id=<%= r.getReservationId() %>'">반납</button>
+                    <% } else { %>
+                        <button class="btn-cancel" onclick="if(confirm('예약을 취소하시겠습니까?')) location.href='reservation_action.jsp?action=cancel&id=<%= r.getReservationId() %>'">취소</button>
+                    <% } %>
                 </td>
             </tr>
             <% }} %>
