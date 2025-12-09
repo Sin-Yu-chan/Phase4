@@ -107,7 +107,7 @@
                         <div class="card-icon">📊</div><div class="card-title">통계 데이터</div>
                     </a>
                     <a href="student_list.jsp" class="card">
-                        <div class="card-icon">🎓</div><div class="card-title">학과별 학생 조회</div>
+                        <div class="card-icon">🎓</div><div class="card-title">통합 학생 조회</div>
                     </a>
                     <a href="manage_stock.jsp" class="card">
                         <div class="card-icon">📦</div><div class="card-title">비품 자재 관리</div>

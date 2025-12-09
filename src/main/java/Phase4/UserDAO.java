@@ -78,7 +78,7 @@ public class UserDAO {
         return false;
     }
 
-    // 5. 회원 정보 수정 (이름, 학과, 전화번호)
+    // 5. 회원 정보 수정
     public boolean updateUserInfo(Connection conn, String userId, String newName, String newDept, String newPhone) {
         String sql = "UPDATE P_User SET Name = ?, Department = ?, Phone_Number = ? WHERE User_ID = ?";
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -119,7 +119,7 @@ public class UserDAO {
         }
     }
 
-    // 8. 관리자 수 확인 (탈퇴 방지용)
+    // 8. 관리자 수 확인
     public int getAdminCount(Connection conn) {
         String sql = "SELECT COUNT(*) FROM P_User WHERE Role = 'Admin'";
         try (PreparedStatement pstmt = conn.prepareStatement(sql);
@@ -129,6 +129,7 @@ public class UserDAO {
         return 0;
     }
     
+    // 9. ID로 사용자 정보 조회
     public UserDTO getUserById(Connection conn, String id) {
         String sql = "SELECT * FROM P_User WHERE User_ID = ?";
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -146,13 +147,31 @@ public class UserDAO {
         return null;
     }
     
-    // [수정됨] 10. [Query 1] 학과별 학생 조회 (웹 전용 - List 반환)
-    public List<UserDTO> getStudentsByDept(Connection conn, String deptName) {
+    // 10. 통합 학생 검색 (학번, 이름-대소문자무시, 학과)
+    public List<UserDTO> searchStudents(Connection conn, String type, String keyword) {
         List<UserDTO> list = new ArrayList<>();
-        String sql = "SELECT * FROM P_User WHERE Department = ? AND Role = 'Student' ORDER BY Name";
+        String sql = "SELECT * FROM P_User WHERE Role = 'Student' ";
+
+        // 검색 조건 추가
+        if ("id".equals(type)) {
+            sql += "AND User_ID LIKE ? "; 
+        } else if ("name".equals(type)) {
+            sql += "AND UPPER(Name) LIKE UPPER(?) ";    
+        } else if ("dept".equals(type)) {
+            sql += "AND Department = ? "; 
+        }
+        
+        sql += "ORDER BY User_ID ASC"; 
         
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, deptName);
+            if ("id".equals(type)) {
+                pstmt.setString(1, keyword + "%"); 
+            } else if ("name".equals(type)) {
+                pstmt.setString(1, "%" + keyword + "%"); 
+            } else if ("dept".equals(type)) {
+                pstmt.setString(1, keyword);
+            }
+
             try (ResultSet rs = pstmt.executeQuery()) {
                 while (rs.next()) {
                     list.add(new UserDTO(
@@ -166,7 +185,7 @@ public class UserDAO {
                 }
             }
         } catch (SQLException e) {
-            System.out.println("❌ 조회 실패: " + e.getMessage());
+            System.out.println("❌ 학생 조회 실패: " + e.getMessage());
             e.printStackTrace();
         }
         return list;

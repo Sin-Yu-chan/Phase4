@@ -12,13 +12,17 @@
         return;
     }
 
-    String dept = request.getParameter("dept");
-    List<UserDTO> list = null;
+    request.setCharacterEncoding("UTF-8");
+    String searchType = request.getParameter("searchType"); 
+    String keyword = request.getParameter("keyword");
 
-    if (dept != null && !dept.isEmpty()) {
+    List<UserDTO> list = null;
+    
+    // 검색 조건이 있을 때만 조회
+    if (searchType != null && keyword != null && !keyword.trim().isEmpty()) {
         Connection conn = DBConnection.getConnection();
         UserDAO userDAO = new UserDAO();
-        list = userDAO.getStudentsByDept(conn, dept);
+        list = userDAO.searchStudents(conn, searchType, keyword.trim());
         DBConnection.close(conn);
     }
 %>
@@ -27,15 +31,16 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>학과별 학생 조회</title>
+<title>학생 명단 통합 조회</title>
 <style>
     body { font-family: 'Segoe UI', sans-serif; text-align: center; background-color: #f8f9fa; }
-    .container { width: 80%; margin: 40px auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+    .container { width: 85%; margin: 40px auto; background: white; padding: 30px; border-radius: 10px;
+                 box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
     
     h2 { color: #333; margin-bottom: 20px; }
     
     .search-box { background: #e9ecef; padding: 20px; border-radius: 8px; margin-bottom: 30px; display: inline-block; }
-    select { padding: 8px 15px; border-radius: 4px; border: 1px solid #ccc; font-size: 14px; }
+    select, input { padding: 8px 12px; border-radius: 4px; border: 1px solid #ccc; font-size: 14px; margin-right: 5px; }
     button { padding: 8px 20px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
     button:hover { background-color: #0056b3; }
     
@@ -48,31 +53,68 @@
     
     .no-data { color: #888; padding: 30px; font-style: italic; }
 </style>
+
+<script>
+    // 검색 조건에 따라 입력 UI를 변경
+    function updateSearchUI() {
+        var type = document.getElementById("searchType").value;
+        var textInput = document.getElementById("keywordInput");
+        var deptSelect = document.getElementById("deptSelect");
+        
+        if (type === "dept") {
+            // 학과 선택 시
+            textInput.style.display = "none";
+            textInput.disabled = true;
+            
+            deptSelect.style.display = "inline-block";
+            deptSelect.disabled = false;
+        } else {
+            // 학번/이름 선택 시
+            textInput.style.display = "inline-block";
+            textInput.disabled = false;
+            deptSelect.style.display = "none";
+            deptSelect.disabled = true;
+            
+            if(type === "id") textInput.placeholder = "예: 2025 (학번 앞자리)";
+            else if(type === "name") textInput.placeholder = "예: kim (대소문자 무시)";
+        }
+    }
+</script>
 </head>
-<body>
+<body onload="updateSearchUI()">
 
     <div class="container">
         <button class="home-btn" onclick="location.href='index.jsp'">🏠 메인으로</button>
-        <h2>👨‍🎓 학과별 학생 명단 조회</h2>
+        <h2>👨‍🎓 학생 통합 조회 시스템</h2>
         
         <div class="search-box">
             <form action="student_list.jsp" method="get">
-                <label style="font-weight:bold; margin-right:10px;">학과 선택:</label>
-                <select name="dept">
-                    <option value="">-- 학과를 선택하세요 --</option>
-                    <option value="Computer Science" <%= "Computer Science".equals(dept)?"selected":"" %>>컴퓨터공학과 (CS)</option>
-                    <option value="Electronic Eng" <%= "Electronic Eng".equals(dept)?"selected":"" %>>전자공학과 (EE)</option>
-                    <option value="Mechanical Eng" <%= "Mechanical Eng".equals(dept)?"selected":"" %>>기계공학과 (ME)</option>
-                    <option value="Business Admin" <%= "Business Admin".equals(dept)?"selected":"" %>>경영학과 (Biz)</option>
-                    <option value="English Lit" <%= "English Lit".equals(dept)?"selected":"" %>>영문학과 (Eng)</option>
-                    <option value="Physics" <%= "Physics".equals(dept)?"selected":"" %>>물리학과 (Phy)</option>
+                <label style="font-weight:bold;">검색 조건:</label>
+                
+                <select name="searchType" id="searchType" onchange="updateSearchUI()">
+                    <option value="id" <%= "id".equals(searchType)?"selected":"" %>>학번 (Student ID)</option>
+                    <option value="name" <%= "name".equals(searchType)?"selected":"" %>>이름 (Name)</option>
+                    <option value="dept" <%= "dept".equals(searchType)?"selected":"" %>>학과 (Department)</option>
                 </select>
-                <button type="submit">조회하기</button>
+                
+                <input type="text" id="keywordInput" name="keyword" value="<%= (keyword!=null && !"dept".equals(searchType))?keyword:"" %>" style="width:250px;">
+                
+                <select id="deptSelect" name="keyword" style="display:none; width:260px;" disabled>
+                    <option value="">-- 학과를 선택하세요 --</option>
+                    <option value="Computer Science" <%= "Computer Science".equals(keyword)?"selected":"" %>>컴퓨터공학과 (CS)</option>
+                    <option value="Electronic Eng" <%= "Electronic Eng".equals(keyword)?"selected":"" %>>전자공학과 (EE)</option>
+                    <option value="Mechanical Eng" <%= "Mechanical Eng".equals(keyword)?"selected":"" %>>기계공학과 (ME)</option>
+                    <option value="Business Admin" <%= "Business Admin".equals(keyword)?"selected":"" %>>경영학과 (Biz)</option>
+                    <option value="English Lit" <%= "English Lit".equals(keyword)?"selected":"" %>>영문학과 (Eng)</option>
+                    <option value="Physics" <%= "Physics".equals(keyword)?"selected":"" %>>물리학과 (Phy)</option>
+                </select>
+                
+                <button type="submit">🔍 조회하기</button>
             </form>
         </div>
 
-        <% if (dept != null && !dept.isEmpty()) { %>
-            <h3 style="text-align:left; color:#007bff;">📋 <%= dept %> 학생 목록 (<%= (list != null) ? list.size() : 0 %>명)</h3>
+        <% if (list != null) { %>
+            <h3 style="text-align:left; color:#007bff;">📋 검색 결과 (<%= list.size() %>명)</h3>
             
             <table>
                 <thead>
@@ -86,7 +128,7 @@
                 </thead>
                 <tbody>
                 <%
-                    if (list != null && !list.isEmpty()) {
+                    if (!list.isEmpty()) {
                         for (UserDTO u : list) {
                 %>
                     <tr>
@@ -100,7 +142,7 @@
                         }
                     } else {
                 %>
-                    <tr><td colspan="5" class="no-data">해당 학과에 등록된 학생이 없습니다.</td></tr>
+                    <tr><td colspan="5" class="no-data">조건에 맞는 학생이 없습니다.</td></tr>
                 <%
                     }
                 %>
