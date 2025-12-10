@@ -16,6 +16,7 @@
     List<ReservationDTO> list = resDAO.getMyReservations(conn, userId);
     DBConnection.close(conn);
     
+    // 포맷 설정 (년-월-일 시:분)
     SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm");
     long currentTime = System.currentTimeMillis(); // 현재 시간
 %>
@@ -27,7 +28,7 @@
 <title>나의 예약 확인</title>
 <style>
     body { font-family: 'Segoe UI', sans-serif; text-align: center; background-color: #f4f6f9; padding: 20px; }
-    .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }
+    .container { max-width: 850px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }
     table { width: 100%; border-collapse: collapse; margin-top: 20px; }
     th, td { padding: 10px; border-bottom: 1px solid #eee; font-size: 14px; }
     th { background-color: #007bff; color: white; }
@@ -47,16 +48,16 @@
                     out.println("<tr><td colspan='5'>예약 내역이 없습니다.</td></tr>"); 
                 } else {
                     for(ReservationDTO r : list) {
-                        String timeStr = sdf.format(r.getStartTime()) + " ~ " + sdf.format(r.getEndTime()).substring(11);
+                        String timeStr = sdf.format(r.getStartTime()) + " ~ " + sdf.format(r.getEndTime());
                         
-                        // 시간 비교
+                        // 현재 시간과 시작 시간 비교
                         boolean isStarted = r.getStartTime().getTime() <= currentTime;
             %>
             <tr>
                 <td><%= r.getReservationId() %></td>
                 <td><%= r.getEquipmentName() %></td>
                 <td><%= r.getModelName() %></td>
-                <td><%= timeStr %></td>
+                <td style="font-size: 13px;"><%= timeStr %></td>
                 
                 <td>
                     <% if (isStarted) { %>

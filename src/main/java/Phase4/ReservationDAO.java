@@ -189,7 +189,7 @@ public class ReservationDAO {
             if (rs.next()) {
                 // 겹치는 예약 발견 -> 실패 처리
                 conn.rollback();
-                resultMsg = "이미 예약된 시간입니다. (중복 발생)";
+                resultMsg = "이미 예약된 시간입니다.";
             } else {
                 // 4. 예약 진행 (Insert)
                 String newId = "RES" + (System.currentTimeMillis() % 1000000); // 기존 로직 유지
