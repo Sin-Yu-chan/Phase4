@@ -151,6 +151,32 @@ public class ReservationDAO {
         return false;
     }
     
+    // 6. 특정 비품의 향후 예약 일정 조회 (AJAX용)
+    public List<ReservationDTO> getFutureReservations(Connection conn, String equipId) {
+        List<ReservationDTO> list = new ArrayList<>();
+        String sql = "SELECT Start_Time, End_Time FROM Reservation "
+                   + "WHERE Equipment_ID = ? AND End_Time > SYSTIMESTAMP "
+                   + "ORDER BY Start_Time ASC";
+        
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, equipId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    ReservationDTO dto = new ReservationDTO(
+                        null, 
+                        rs.getTimestamp("Start_Time"), 
+                        rs.getTimestamp("End_Time"), 
+                        null, null, null, null
+                    );
+                    list.add(dto);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+    
     //트랜잭션 예약 처리
     public String makeSafeReservation(Connection conn, String userId, String equipId, Timestamp start, Timestamp end) {
         String resultMsg = "fail";
